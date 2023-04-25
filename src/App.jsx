@@ -13,7 +13,7 @@ const Mainpage = () => {
 
   const signInWithTwitter = () => {
     const provider = new TwitterAuthProvider();
-
+``
     setPersistence(authentication, browserLocalPersistence)
       .then(() => {
         signInWithPopup(authentication, provider)
@@ -194,7 +194,7 @@ const Mainpage = () => {
         alert("Enter some more text!")
       }
 
-      const splitTextByPercentage = (text, percentage) => {
+      function splitTextByPercentage(text, percentage) {
         const totalLength = text.length;
         const chunkLength = Math.floor(totalLength * percentage);
         const chunks = [];
