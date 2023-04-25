@@ -336,6 +336,12 @@ const Mainpage = () => {
                               About the project
                               </a>
                             </li>
+
+                            <li>
+                              <a className="hover:text-gray-200" href="https://github.com/RexanWONG/TweetScribe/" target="_blank" rel="noopener noreferrer">
+                                Github
+                              </a>
+                            </li>
                         </ul>
 
                         {signedInWithTwitter ? (
