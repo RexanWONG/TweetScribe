@@ -5,7 +5,7 @@ import { authentication } from '../firebase/firebaseConfig'
 import { TwitterAuthProvider, signInWithPopup, setPersistence, browserLocalPersistence, inMemoryPersistence } from 'firebase/auth'
 import './App.css'
 
-const Mainpage = () => {
+const App = () => {
   const [signedInWithTwitter, setSignedInWithTwitter] = useState(false)
   const [twitterUsername, setTwitterUsername] = useState("")
   const [twitterHandle, setTwitterHandle] = useState("")
@@ -13,7 +13,7 @@ const Mainpage = () => {
 
   const signInWithTwitter = () => {
     const provider = new TwitterAuthProvider();
-``
+
     setPersistence(authentication, browserLocalPersistence)
       .then(() => {
         signInWithPopup(authentication, provider)
@@ -650,4 +650,4 @@ const Mainpage = () => {
   )
 }
 
-export default Mainpage
+export default App
