@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Rings } from 'react-loader-spinner'
-import NumberLine from './components/NumberLine'
+import { EmojiLevel, Loader, NumberLine, ThreadHashtagLevel, ThreadNumber, ThreadTone, TwitterThread } from './components'
 import { authentication } from '../firebase/firebaseConfig'
 import { TwitterAuthProvider, signInWithPopup, setPersistence, browserLocalPersistence, inMemoryPersistence } from 'firebase/auth'
 import './App.css'
@@ -193,22 +192,6 @@ const App = () => {
       } else {
         alert("Enter some more text!")
       }
-
-      function splitTextByPercentage(text, percentage) {
-        const totalLength = text.length;
-        const chunkLength = Math.floor(totalLength * percentage);
-        const chunks = [];
-      
-        let startIndex = 0;
-        while (startIndex < totalLength) {
-          const endIndex = startIndex + chunkLength;
-          const chunk = text.slice(startIndex, endIndex);
-          chunks.push(chunk);
-          startIndex = endIndex;
-        }
-      
-        return chunks;
-      }
       
     } catch (error) {
       alert(error)
@@ -281,7 +264,115 @@ const App = () => {
     } catch (error) {
       alert(error)
     }
+  }
 
+  const generateInstantThread = async () => {
+    try {
+      console.log("Calling the OpenAI API");
+
+        const inputChunks = splitTextByPercentage(inputValue.inputText, 0.3);
+        const allImportantStatements = [];
+
+        setRequestedGenerateTwitterThread(true)
+        const target = document.getElementById('scroll-target');
+        target.scrollIntoView({behavior: 'smooth'});
+
+        for (const chunk of inputChunks) {
+          const prompt = `You are my writing assistant.  Write a paragraph to summarize the text. The paragraph should be very clear so that even without reading the entire text, 
+          the person reading the statements will understand the ideas of the entire text.  Paragraph should be around 3 sentences  
+          Make the paragraph informative and clear..    
+          So without further ado, here is the text that I will give you: ${chunk}`;
+
+          const APIBody = {
+            model: "text-davinci-003",
+            prompt: prompt,
+            temperature: 1,
+            max_tokens: 300,
+            top_p: 1.0,
+            frequency_penalty: 0.0,
+            presence_penalty: 0.0,
+          };
+
+          const response = await fetch("https://api.openai.com/v1/completions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: "Bearer " + API_KEY,
+            },
+            body: JSON.stringify(APIBody),
+          });
+
+          const data = await response.json();
+          console.log("Batches:", data);
+
+          const statements = data.choices[0].text
+            .trim()
+            .split("\n")
+            .map((line) => line.trim());
+          allImportantStatements.push(...statements);
+        }
+
+        const combinedStatements = allImportantStatements.join("\n");
+
+        const finalPrompt = `I will give you a list of important statements.  Here are the statements : ${combinedStatements}
+        Please use the statements to write a well written Twitter thread.  Set the tone throughout the thread to be ${inputValue.tone}.  
+        ${emojiLevelInWords}.  ${hashtagLevelInWords}. For the intro tweet of the thread, I need an engaging and concise introduction for my Twitter thread, 
+        possibly including a surprising statistic, a relevant news item, or an interesting anecdote, quote, or irony to draw in my audience and set the tone for the rest of the thread. 
+        I also require a strong conclusion that ties together the main points and reinforces the message, 
+        potentially ending with a call to action or thought-provoking statement to encourage further engagement.
+        For each tweet in a thread, put the number in front of it (eg first tweet, 1.  Second tweet, 2.).  
+         Limit the num of tweets in the thread to ${inputValue.numOfTweetsInThread} tweets.`;
+
+        const finalAPIBody = {
+          model: "text-davinci-003",
+          prompt: finalPrompt,
+          temperature: 1,
+          max_tokens: 3500,
+          top_p: 1.0,
+          frequency_penalty: 0.0,
+          presence_penalty: 0.0,
+        };
+
+        await fetch("https://api.openai.com/v1/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + API_KEY,
+          },
+          body: JSON.stringify(finalAPIBody),
+        }).then((data) => {
+          return data.json();
+        }).then((data) => {
+          console.log(data)
+          setTwitterThread(((data.choices[0].text.trim()).split("\n")).map((line, index) => (
+            <div key={index} className="border-2 border-blue-500 rounded-lg p-10 my-4 max-w-[600px]">
+              <p className="font-bold">Tweet {index}:</p>
+              <p>{line}</p>
+            </div>
+          )))
+
+          setTwitterThreadGenerated(true)
+          setRequestedGenerateTwitterThread(false)
+        })
+    } catch (error) {
+      alert(error)
+    }
+  }
+
+  function splitTextByPercentage(text, percentage) {
+    const totalLength = text.length;
+    const chunkLength = Math.floor(totalLength * percentage);
+    const chunks = [];
+  
+    let startIndex = 0;
+    while (startIndex < totalLength) {
+      const endIndex = startIndex + chunkLength;
+      const chunk = text.slice(startIndex, endIndex);
+      chunks.push(chunk);
+      startIndex = endIndex;
+    }
+  
+    return chunks;
   }
 
   const handleInputChange = (event) => {
@@ -382,7 +473,7 @@ const App = () => {
 
       <div className="border-2 border-blue-500 rounded-lg p-6 mt-12 w-full max-w-[850px]">
         <textarea 
-          name="inputText"
+          name="inputText" 
           value={inputValue.inputText}
           onChange={handleInputChange}
           className="text-[20px] font-thin bg-black rounded-lg text-white w-full h-80 p-4 outline-none" 
@@ -462,79 +553,16 @@ const App = () => {
                     <div className='flex flex-col mt-16'>
                       <h1 className='text-4xl text-white font-black'>Configure your upcoming thread</h1>
 
-                      <div className='flex flex-col items-start justify-start mt-12'>
-                        <h1 className='text-left text-2xl text-white font-thin'>📣 <span className='font-bold'>Tone - </span> How you want your thread to feel like</h1>
-                        <div className="border-2 rounded-lg p-4 mt-5 w-full max-w-[850px]">
-                          <input 
-                            name="tone"
-                            value={inputValue.tone}
-                            onChange={handleInputChange}
-                            className="text-[20px] font-thin bg-black rounded-lg text-white w-full h-16 p-2 outline-none" 
-                            placeholder="super entertaining and informative"
-                          />
-                        </div>
-                      </div>
+                     <ThreadTone tone={inputValue.tone} handleInputChange={handleInputChange}/>
 
                       <div className='flex flex-col items-start justify-start mt-16'>
-                        <h1 className='text-left text-2xl text-white font-thin'>🐥 <span className='font-bold'>Tweets - </span>How many tweets would you like to have in the thread?</h1>
-                        <div className="mt-5 w-full max-w-[850px]">
-                          <input 
-                            type="range"
-                            min="2"
-                            max="14"
-                            step="1"
-                            name="numOfTweetsInThread"
-                            value={inputValue.numOfTweetsInThread}
-                            onChange={handleInputChange}
-                            className="text-[20px] font-thin bg-black rounded-lg text-white w-full h-12 outline-none" 
-                          />
-                        </div>
-
+                        <ThreadNumber numOfTweetsInThread={inputValue.numOfTweetsInThread} handleInputChange={handleInputChange}/>
                         <NumberLine number={inputValue.numOfTweetsInThread}/>
-                        
                       </div>
 
-                      <div className='flex flex-col items-start justify-start mt-16'>
-                        <h1 className='text-left text-2xl text-white font-thin'>🙂 <span className='font-bold'>Emoji level - </span>Relative amount of emojis to include in the thread</h1>
-                        <div className="mt-5 w-full max-w-[850px]">
-                          <input 
-                            type="range"
-                            min="0"
-                            max="1"
-                            step="0.5"
-                            name="emojiLevel"
-                            value={inputValue.emojiLevel}
-                            onChange={handleInputChange}
-                            className="text-[20px] font-thin bg-black rounded-lg text-white w-full h-12 outline-none" 
-                          />
-                        </div>
-                        <div className='flex flex-row gap-64'>
-                          <p className='text-gray-400 font-thin'>No emojis at all!</p>
-                          <p className='text-gray-400 font-thin'>Some emojis!</p>
-                          <p className='text-gray-400 font-thin'>A lot of emojis!</p>
-                        </div>
-                      </div>
+                      <EmojiLevel emojiLevel={inputValue.emojiLevel} handleInputChange={handleInputChange}/>
+                      <ThreadHashtagLevel hashtagLevel={inputValue.hashtagLevel} handleInputChange={handleInputChange} />
 
-                      <div className='flex flex-col items-start justify-start mt-16'>
-                        <h1 className='text-left text-2xl text-white font-thin'>#️⃣ <span className='font-bold'>Hashtag level - </span>Relative amount of hashtags to include in the thread</h1>
-                        <div className="mt-5 w-full max-w-[850px]">
-                          <input 
-                            type="range"
-                            min="0"
-                            max="1"
-                            step="0.5"
-                            name="hashtagLevel"
-                            value={inputValue.hashtagLevel}
-                            onChange={handleInputChange}
-                            className="text-[20px] font-thin bg-black rounded-lg text-white w-full h-12 outline-none" 
-                          />
-                        </div>
-                        <div className='flex flex-row gap-60'>
-                          <p className='text-gray-400 font-thin'>No hashtags!</p>
-                          <p className='text-gray-400 font-thin'>#a-bit-of-hashtags!</p>
-                          <p className='text-gray-400 font-thin'>#a-lot-of-hashtags!</p>
-                        </div>
-                      </div>
                     </div>
 
                     <button id="scroll-button" onClick={generateThreadWithStatements} className="font-bold text-3xl rounded-lg px-8 py-4 bg-gradient-to-r from-green-300 via-blue-500 to-purple-600 animate-text mt-10 mb-16 hover:shadow-lg hover:from-blue-500 hover:to-purple-600 hover:text-white">
@@ -548,43 +576,14 @@ const App = () => {
                   !twitterThreadGenerated? (
                     <div />
                   ) : (
-                    <div className='flex flex-row items-center justify-center gap-32 mt-64'>
-                      <div className='flex flex-col relative bottom-48 mb-10 ml-32'>
-                        <h1 className='max-w-[570px] text-8xl font-black bg-gradient-to-r from-green-300 via-blue-500 to-purple-600 bg-clip-text text-transparent animate-text'>
-                        <span className='text-white'>🧵</span>
-                        Your statements have been threaded!
-                        </h1>
-                        <p className='text-white text-2xl font-thin max-w-[400px] mt-10'>
-                          🤩 Here's your potential twitter thread.  See if you like it or not.  
-                          You can always edit the individual threads to your liking.
-    
-                        </p>
-    
-                        <p className='text-white text-2xl font-thin max-w-[400px] mt-10'>😡 Dislike the thread?  You can always reclick the <span className='bg-gradient-to-r from-green-300 via-blue-500 to-purple-600 bg-clip-text text-transparent animate-text'>'Start Threadding'</span> button to 
-                          generate a new version of the thread that you want!
-                        </p>
-                      </div>
-                      <h2 className='text-white'>
-                        {twitterThread}
-                      </h2>
-                    </div>
+                    <TwitterThread 
+                      headline={'Your statements have been threadded!'} 
+                      twitterThread={twitterThread}
+                    />
                   )
                 ) : (
-                  <div className='flex flex-col items-center justify-center mt-64'>
-                    <Rings
-                      height="400"
-                      width="200"
-                      color="#2596be"
-                      radius="10"
-                      wrapperStyle={{}}
-                      wrapperClass=""
-                      visible={true}
-                      ariaLabel="rings-loading"
-                    />
-                    <h1 className='text-white text-2xl font-light'>Hold on!  Your request is being processed...</h1>
-                  </div>
+                  <Loader />
                 )}
-    
               </div>
             ) : (
               <div className='flex flex-col items-center justify-center'>
@@ -604,7 +603,6 @@ const App = () => {
                     </div>
                     
                   )
-
                 ) : (
                   <div className='flex flex-col items-center justify-center'>
                     <p className='text-white text-center max-w-[800px] font-thin'>You need to have a Twitter account in order to use the product.  Click 'sign in with Twitter' at the top right corner of the navbar to sign in to your Twitter account</p>
@@ -613,37 +611,82 @@ const App = () => {
                     </button>
 
                   </div>
-                  
-
                 )}
-                
               </div>
-    
             )
           ) : (
-            <div className='flex flex-col items-center justify-center mt-80'>
-              <Rings
-                height="400"
-                width="200"
-                color="#2596be"
-                radius="10"
-                wrapperStyle={{}}
-                wrapperClass=""
-                visible={true}
-                ariaLabel="rings-loading"
-              />
-              <h1 className='text-white text-2xl font-light'>Hold on!  Your request is being processed...</h1>
-            </div>
+            <Loader />
     
           )
         ) : (
           isInstantThread ? (
-            <h1 className='text-white text-4xl font-bold'>🚧 This feature is not here yet!  Stay tuned for it! 🚧</h1>
+            <div className='flex flex-col items-center justify-center'>
+              <div className='flex flex-row gap-16'>
+                <div className='flex flex-col'>
+                  <div className='flex flex-col'>
+                    <h1 className='text-4xl text-white font-black'>Configure your upcoming thread</h1>
+
+                  <ThreadTone tone={inputValue.tone} handleInputChange={handleInputChange}/>
+
+                    <div className='flex flex-col items-start justify-start mt-16'>
+                      <ThreadNumber numOfTweetsInThread={inputValue.numOfTweetsInThread} handleInputChange={handleInputChange}/>
+                      <NumberLine number={inputValue.numOfTweetsInThread}/>
+                    </div>
+
+                    <EmojiLevel emojiLevel={inputValue.emojiLevel} handleInputChange={handleInputChange}/>
+                    <ThreadHashtagLevel hashtagLevel={inputValue.hashtagLevel} handleInputChange={handleInputChange} />
+                  </div>
+
+                  <div className='mt-16'>
+                    {signedInWithTwitter ? (
+                      wordCount <= 8000 ? (
+                        <div className='flex items-center justify-center'>
+                          <button id="scroll-button" onClick={generateInstantThread} className="font-bold text-3xl rounded-lg px-8 py-4 bg-gradient-to-r from-green-300 via-blue-500 to-purple-600 animate-text mt-10 mb-16 hover:shadow-lg hover:from-blue-500 hover:to-purple-600 hover:text-white">
+                            Generate Twitter Thread!!
+                          </button>
+                        </div>
+                      ) : (
+                        <div className='flex flex-col items-center justify-center'>
+                          <p className='text-white text-center max-w-[800px] font-thin'>Too many words</p>
+                          <button id="scroll-button" className="font-bold text-3xl rounded-lg px-8 py-4 bg-gray-400 animate-text mt-10 mb-16 hover:shadow-lg hover:animate-pulse">
+                            Generate Twitter Thread!
+                          </button>
+                        </div>
+                        
+                      )
+
+                    ) : (
+                      <div className='flex flex-col items-center justify-center'>
+                        <p className='text-white text-center max-w-[800px] font-thin'>You need to have a Twitter account in order to use the product.  Click 'sign in with Twitter' at the top right corner of the navbar to sign in to your Twitter account</p>
+                        <button id="scroll-button" className="font-bold text-3xl rounded-lg px-8 py-4 bg-gray-400 animate-text mt-10 mb-16 hover:animate-pulse">
+                          Generate Twitter Thread!
+                        </button>
+
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+
+            {!requestedGenerateTwitterThread ? (
+              !twitterThreadGenerated? (
+                <div />
+              ) : (
+                <TwitterThread 
+                  headline={'Check out your Twitter Thread!'} 
+                  twitterThread={twitterThread}
+                />
+              )
+            ) : (
+              <Loader />
+            )}
+          </div>
           ) : (
             <h1>U want nothing???</h1>
           )
-
         )}
+
       </div>
       <div id="scroll-target" className="mt-64 mb-64">beep beep.  boop beep.</div>
     </div>
