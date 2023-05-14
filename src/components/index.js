@@ -5,6 +5,7 @@ import ThreadTone from './ThreadTone';
 import EmojiLevel from './EmojiLevel';
 import ThreadNumber from './ThreadNumber';
 import ThreadHashtagLevel from './ThreadHashtagLevel';
+import Payment from './Payment';
 
 export {
   NumberLine,
@@ -13,5 +14,6 @@ export {
   ThreadTone,
   EmojiLevel,
   ThreadNumber,
-  ThreadHashtagLevel
+  ThreadHashtagLevel,
+  Payment
 };
