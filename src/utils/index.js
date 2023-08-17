@@ -20,7 +20,7 @@ export async function generateStatementsFromText(wordCount, inputText) {
           "model": "text-davinci-003",
           "prompt": `You are my writing assistant.  You are going to generate 8 important statements from the following 
           text that I will give you.  The statements should be very clear so that even without reading the 
-          entire text, the person reading the statements will understand the ideas of the entire text.  Make the statements informative and clear.  
+          entire text, the person reading the statements will understand the istdeas of the entire text.  Make the statements informative and clear.  
           Also, in the middle of each statement, 
           seperate them with a new line programatically (\n).  So without further ado, here is the text that I will give you : 
           ${inputText}`,

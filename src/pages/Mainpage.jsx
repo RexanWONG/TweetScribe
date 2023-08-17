@@ -171,8 +171,6 @@ const Mainpage = () => {
     setShowPayment(!showPayment);
   };
   
-  
-
   useEffect(() => {
     const words = inputValue.inputText.split(' ');
     let wordCount = 0;
@@ -323,7 +321,7 @@ const Mainpage = () => {
         </div>
         
         {!showUpgradeModal ? (
-          <div className='relative left-80 flex flex-row mt-2'>
+          <div className='relative left-80 flex flex-row mt-2'>na
             <button onClick={handleRandomTextSample}>
               <RxMagicWand 
                 className='text-white hover:animate-pulse'
